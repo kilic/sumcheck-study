@@ -25,12 +25,6 @@ pub trait FieldOpsAssigned<Rhs = Self>:
 {
 }
 
-// pub trait FieldOps: core::ops::Neg<Output = Self> + BaseFieldOps + BaseFieldOpsAssigned
-// // + for<'a> BaseFieldOps<&'a Self, Self>
-// // + for<'a> BaseFieldOpsAssigned<&'a Self>
-// {
-// }
-
 pub trait Field:
     Sized
     + core::ops::Neg<Output = Self>

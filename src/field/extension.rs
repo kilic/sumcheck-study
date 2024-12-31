@@ -36,10 +36,6 @@ impl<const E: usize, F: Extended<E>> Ext<E, F> {
         inner[0] = e;
         Self(inner)
     }
-
-    // pub(crate) const fn inner(&self) -> &[F; E] {
-    //     &self.0
-    // }
 }
 
 impl<const E: usize, F: Extended<E>> std::ops::Index<usize> for Ext<E, F> {
@@ -260,27 +256,6 @@ impl<const E: usize, F: Extended<E>> std::ops::Add<Ext<E, F>> for Ext<E, F> {
     }
 }
 
-// impl<const E: usize, F: Extended<E>> std::ops::Add<Ext<E, F>> for &Ext<E, F> {
-//     type Output = Ext<E, F>;
-//     fn add(self, rhs: Ext<E, F>) -> Self::Output {
-//         *self + rhs
-//     }
-// }
-
-// impl<const E: usize, F: Extended<E>> std::ops::Add<&Ext<E, F>> for Ext<E, F> {
-//     type Output = Self;
-//     fn add(self, rhs: &Self) -> Self::Output {
-//         self + *rhs
-//     }
-// }
-
-// impl<const E: usize, F: Extended<E>> std::ops::Add<&Ext<E, F>> for &Ext<E, F> {
-//     type Output = Ext<E, F>;
-//     fn add(self, rhs: &Ext<E, F>) -> Self::Output {
-//         *self + *rhs
-//     }
-// }
-
 impl<const E: usize, F: Extended<E>> std::ops::Add<F> for Ext<E, F> {
     type Output = Self;
     fn add(mut self, rhs: F) -> Self::Output {
@@ -289,38 +264,11 @@ impl<const E: usize, F: Extended<E>> std::ops::Add<F> for Ext<E, F> {
     }
 }
 
-// impl<const E: usize, F: Extended<E>> std::ops::Add<&F> for &Ext<E, F> {
-//     type Output = Ext<E, F>;
-//     fn add(self, rhs: &F) -> Self::Output {
-//         self + *rhs
-//     }
-// }
-
-// impl<const E: usize, F: Extended<E>> std::ops::Add<F> for &Ext<E, F> {
-//     type Output = Ext<E, F>;
-//     fn add(self, rhs: F) -> Self::Output {
-//         *self + rhs
-//     }
-// }
-
-// impl<const E: usize, F: Extended<E>> std::ops::Add<&F> for Ext<E, F> {
-//     type Output = Self;
-//     fn add(self, rhs: &F) -> Self::Output {
-//         self + *rhs
-//     }
-// }
-
 impl<const E: usize, F: Extended<E>> std::ops::AddAssign for Ext<E, F> {
     fn add_assign(&mut self, rhs: Self) {
         self.iter_mut().zip(rhs.iter()).for_each(|(l, &r)| *l += r);
     }
 }
-
-// impl<const E: usize, F: Extended<E>> std::ops::AddAssign<&Ext<E, F>> for Ext<E, F> {
-//     fn add_assign(&mut self, rhs: &Self) {
-//         self.iter_mut().zip(rhs.iter()).for_each(|(l, &r)| *l += r);
-//     }
-// }
 
 impl<const E: usize, F: Extended<E>> std::ops::AddAssign<F> for Ext<E, F> {
     fn add_assign(&mut self, rhs: F) {
@@ -328,39 +276,12 @@ impl<const E: usize, F: Extended<E>> std::ops::AddAssign<F> for Ext<E, F> {
     }
 }
 
-// impl<const E: usize, F: Extended<E>> std::ops::AddAssign<&F> for Ext<E, F> {
-//     fn add_assign(&mut self, rhs: &F) {
-//         self[0] += *rhs;
-//     }
-// }
-
 impl<const E: usize, F: Extended<E>> std::ops::Sub for Ext<E, F> {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self::Output {
         std::array::from_fn(|i| self[i] - rhs[i]).into()
     }
 }
-
-// impl<const E: usize, F: Extended<E>> std::ops::Sub<&Ext<E, F>> for &Ext<E, F> {
-//     type Output = Ext<E, F>;
-//     fn sub(self, rhs: &Ext<E, F>) -> Self::Output {
-//         *self - *rhs
-//     }
-// }
-
-// impl<const E: usize, F: Extended<E>> std::ops::Sub<Ext<E, F>> for &Ext<E, F> {
-//     type Output = Ext<E, F>;
-//     fn sub(self, rhs: Ext<E, F>) -> Self::Output {
-//         *self - rhs
-//     }
-// }
-
-// impl<const E: usize, F: Extended<E>> std::ops::Sub<&Ext<E, F>> for Ext<E, F> {
-//     type Output = Self;
-//     fn sub(self, rhs: &Self) -> Self::Output {
-//         self - *rhs
-//     }
-// }
 
 impl<const E: usize, F: Extended<E>> std::ops::Sub<F> for Ext<E, F> {
     type Output = Self;
@@ -370,13 +291,6 @@ impl<const E: usize, F: Extended<E>> std::ops::Sub<F> for Ext<E, F> {
     }
 }
 
-// impl<const E: usize, F: Extended<E>> std::ops::Sub<&F> for &Ext<E, F> {
-//     type Output = Ext<E, F>;
-//     fn sub(self, rhs: &F) -> Self::Output {
-//         *self - *rhs
-//     }
-// }
-
 impl<const E: usize, F: Extended<E>> std::ops::Sub<F> for &Ext<E, F> {
     type Output = Ext<E, F>;
     fn sub(self, rhs: F) -> Self::Output {
@@ -384,36 +298,17 @@ impl<const E: usize, F: Extended<E>> std::ops::Sub<F> for &Ext<E, F> {
     }
 }
 
-// impl<const E: usize, F: Extended<E>> std::ops::Sub<&F> for Ext<E, F> {
-//     type Output = Self;
-//     fn sub(self, rhs: &F) -> Self::Output {
-//         self - *rhs
-//     }
-// }
-
 impl<const E: usize, F: Extended<E>> std::ops::SubAssign for Ext<E, F> {
     fn sub_assign(&mut self, rhs: Self) {
         self.iter_mut().zip(rhs.iter()).for_each(|(l, &r)| *l -= r);
     }
 }
 
-// impl<const E: usize, F: Extended<E>> std::ops::SubAssign<&Ext<E, F>> for Ext<E, F> {
-//     fn sub_assign(&mut self, rhs: &Self) {
-//         self.iter_mut().zip(rhs.iter()).for_each(|(l, &r)| *l -= r);
-//     }
-// }
-
 impl<const E: usize, F: Extended<E>> std::ops::SubAssign<F> for Ext<E, F> {
     fn sub_assign(&mut self, rhs: F) {
         self[0] -= rhs;
     }
 }
-
-// impl<const E: usize, F: Extended<E>> std::ops::SubAssign<&F> for Ext<E, F> {
-//     fn sub_assign(&mut self, rhs: &F) {
-//         self[0] -= *rhs;
-//     }
-// }
 
 impl<const E: usize, F: Extended<E>> std::ops::Mul<Ext<E, F>> for Ext<E, F> {
     type Output = Self;
@@ -445,36 +340,9 @@ impl<const E: usize, F: Extended<E>> std::ops::Mul<Ext<E, F>> for Ext<E, F> {
     }
 }
 
-impl<const E: usize, F: Extended<E>> std::ops::Mul<&Ext<E, F>> for &Ext<E, F> {
-    type Output = Ext<E, F>;
-    fn mul(self, rhs: &Ext<E, F>) -> Self::Output {
-        *self * *rhs
-    }
-}
-
-impl<const E: usize, F: Extended<E>> std::ops::Mul<Ext<E, F>> for &Ext<E, F> {
-    type Output = Ext<E, F>;
-    fn mul(self, rhs: Ext<E, F>) -> Self::Output {
-        *self * rhs
-    }
-}
-
-impl<const E: usize, F: Extended<E>> std::ops::Mul<&Ext<E, F>> for Ext<E, F> {
-    type Output = Self;
-    fn mul(self, rhs: &Ext<E, F>) -> Self::Output {
-        self * *rhs
-    }
-}
-
-impl<const E: usize, F: Extended<E>> std::ops::MulAssign<&Ext<E, F>> for Ext<E, F> {
-    fn mul_assign(&mut self, rhs: &Self) {
-        *self = *self * rhs;
-    }
-}
-
 impl<const E: usize, F: Extended<E>> std::ops::MulAssign<Ext<E, F>> for Ext<E, F> {
     fn mul_assign(&mut self, rhs: Self) {
-        *self *= &rhs;
+        *self = *self * rhs;
     }
 }
 
@@ -482,20 +350,6 @@ impl<const E: usize, F: Extended<E>> std::ops::Mul<F> for Ext<E, F> {
     type Output = Self;
     fn mul(self, rhs: F) -> Self::Output {
         self.iter().map(|&l| l * rhs).collect()
-    }
-}
-
-impl<const E: usize, F: Extended<E>> std::ops::Mul<&F> for &Ext<E, F> {
-    type Output = Ext<E, F>;
-    fn mul(self, rhs: &F) -> Self::Output {
-        self * *rhs
-    }
-}
-
-impl<const E: usize, F: Extended<E>> std::ops::Mul<F> for &Ext<E, F> {
-    type Output = Ext<E, F>;
-    fn mul(self, rhs: F) -> Self::Output {
-        *self * rhs
     }
 }
 
@@ -508,13 +362,7 @@ impl<const E: usize, F: Extended<E>> std::ops::Mul<&F> for Ext<E, F> {
 
 impl<const E: usize, F: Extended<E>> std::ops::MulAssign<F> for Ext<E, F> {
     fn mul_assign(&mut self, rhs: F) {
-        self.mul_assign(&rhs);
-    }
-}
-
-impl<const E: usize, F: Extended<E>> std::ops::MulAssign<&F> for Ext<E, F> {
-    fn mul_assign(&mut self, rhs: &F) {
-        self.iter_mut().for_each(|l| *l *= *rhs);
+        self.iter_mut().for_each(|l| *l *= rhs);
     }
 }
 
@@ -538,6 +386,6 @@ impl<const E: usize, F: Extended<E>> core::iter::Product for Ext<E, F> {
 
 impl<'a, const E: usize, F: Extended<E>> core::iter::Product<&'a Ext<E, F>> for Ext<E, F> {
     fn product<I: Iterator<Item = &'a Ext<E, F>>>(iter: I) -> Self {
-        iter.fold(Self::ONE, |acc, x| acc * x)
+        iter.fold(Self::ONE, |acc, &x| acc * x)
     }
 }

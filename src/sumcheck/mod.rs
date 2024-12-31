@@ -79,5 +79,3 @@ mod test {
         assert_eq!(red0, red1);
     }
 }
-
-// red1: Ext([2a400d470041f677, 51d19b388128d726])
