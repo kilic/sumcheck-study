@@ -33,4 +33,6 @@ sysinfo = "0.33"
 default = []
 prover-sanity = []
 
-
+[[bench]]
+harness = false
+name = "sumcheck"

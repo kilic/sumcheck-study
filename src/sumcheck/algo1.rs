@@ -70,8 +70,8 @@ where
         .zip(hi.par_iter())
         .for_each(|(lo, hi)| lo.iter_mut().zip(hi.iter()).for_each(|(lo, &hi)| *lo -= hi));
 
-    tracing::info_span!("ei").in_scope(|| {
-        for _ in 2..=n {
+    for _ in 2..=n {
+        tracing::info_span!("ei").in_scope(|| {
             let ei = lo
                 .par_iter()
                 .zip(hi.par_iter_mut())
@@ -82,9 +82,9 @@ where
                 .reduce(|| F::ZERO, |a, b| a + b);
             transcript.write(ei)?;
             evals.push(ei);
-        }
-        Ok(())
-    })?;
+            Ok(())
+        })?;
+    }
 
     Ok(evals)
 }
