@@ -13,7 +13,6 @@ pub trait Extended<const E: usize, T = [Self; E]>: Field {
 
 pub trait ExtField<F>: Field + FieldOps<F, Self> + FieldOpsAssigned<F> + From<F> {
     fn as_slice(&self) -> &[F];
-    fn set0(&mut self, e: F);
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy, PartialOrd, Ord)]
@@ -125,9 +124,6 @@ impl<const E: usize, F: Extended<E>> ExtField<F> for Ext<E, F> {
     fn as_slice(&self) -> &[F] {
         &self.0
     }
-    fn set0(&mut self, e: F) {
-        self[0] = e;
-    }
 }
 
 impl<const E: usize, F: Extended<E>> Field for Ext<E, F> {
@@ -220,9 +216,6 @@ impl<F: Field> ExtField<F> for F {
     fn as_slice(&self) -> &[F] {
         std::slice::from_ref(self)
     }
-    fn set0(&mut self, e: F) {
-        *self = e;
-    }
 }
 
 impl<const E: usize, F: Extended<E>> Distribution<Ext<E, F>> for Standard
@@ -238,21 +231,14 @@ where
 impl<const E: usize, F: Extended<E>> std::ops::Neg for Ext<E, F> {
     type Output = Self;
     fn neg(self) -> Self::Output {
-        -&self
-    }
-}
-
-impl<const E: usize, F: Extended<E>> std::ops::Neg for &Ext<E, F> {
-    type Output = Ext<E, F>;
-    fn neg(self) -> Self::Output {
-        std::array::from_fn(|i| -self[i]).into()
+        Self(std::array::from_fn(|i| -self[i]))
     }
 }
 
 impl<const E: usize, F: Extended<E>> std::ops::Add<Ext<E, F>> for Ext<E, F> {
     type Output = Ext<E, F>;
     fn add(self, rhs: Ext<E, F>) -> Self::Output {
-        std::array::from_fn(|i| self[i] + rhs[i]).into()
+        Self(std::array::from_fn(|i| self[i] + rhs[i]))
     }
 }
 
@@ -266,7 +252,9 @@ impl<const E: usize, F: Extended<E>> std::ops::Add<F> for Ext<E, F> {
 
 impl<const E: usize, F: Extended<E>> std::ops::AddAssign for Ext<E, F> {
     fn add_assign(&mut self, rhs: Self) {
-        self.iter_mut().zip(rhs.iter()).for_each(|(l, &r)| *l += r);
+        for i in 0..E {
+            self[i] += rhs[i];
+        }
     }
 }
 
@@ -279,7 +267,7 @@ impl<const E: usize, F: Extended<E>> std::ops::AddAssign<F> for Ext<E, F> {
 impl<const E: usize, F: Extended<E>> std::ops::Sub for Ext<E, F> {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self::Output {
-        std::array::from_fn(|i| self[i] - rhs[i]).into()
+        Self(std::array::from_fn(|i| self[i] - rhs[i]))
     }
 }
 
@@ -300,7 +288,9 @@ impl<const E: usize, F: Extended<E>> std::ops::Sub<F> for &Ext<E, F> {
 
 impl<const E: usize, F: Extended<E>> std::ops::SubAssign for Ext<E, F> {
     fn sub_assign(&mut self, rhs: Self) {
-        self.iter_mut().zip(rhs.iter()).for_each(|(l, &r)| *l -= r);
+        for i in 0..E {
+            self[i] -= rhs[i];
+        }
     }
 }
 
@@ -349,7 +339,11 @@ impl<const E: usize, F: Extended<E>> std::ops::MulAssign<Ext<E, F>> for Ext<E, F
 impl<const E: usize, F: Extended<E>> std::ops::Mul<F> for Ext<E, F> {
     type Output = Self;
     fn mul(self, rhs: F) -> Self::Output {
-        self.iter().map(|&l| l * rhs).collect()
+        let mut e = self;
+        for i in 0..E {
+            e[i] *= rhs;
+        }
+        e
     }
 }
 
@@ -362,7 +356,9 @@ impl<const E: usize, F: Extended<E>> std::ops::Mul<&F> for Ext<E, F> {
 
 impl<const E: usize, F: Extended<E>> std::ops::MulAssign<F> for Ext<E, F> {
     fn mul_assign(&mut self, rhs: F) {
-        self.iter_mut().for_each(|l| *l *= rhs);
+        for i in 0..E {
+            self[i] *= rhs;
+        }
     }
 }
 
