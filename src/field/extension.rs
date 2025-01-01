@@ -53,11 +53,9 @@ impl<const E: usize, F: Extended<E>> std::ops::IndexMut<usize> for Ext<E, F> {
 
 impl<const E: usize, F: Extended<E>> From<F> for Ext<E, F> {
     fn from(e: F) -> Self {
-        std::iter::once(e)
-            .chain(std::iter::repeat(F::ZERO))
-            .take(E)
-            .collect_vec()
-            .into()
+        let mut inner = [F::ZERO; E];
+        inner[0] = e;
+        Self(inner)
     }
 }
 

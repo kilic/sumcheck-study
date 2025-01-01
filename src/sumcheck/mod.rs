@@ -57,25 +57,44 @@ mod test {
         crate::test::init_tracing();
         let mut rng = crate::test::seed_rng();
 
-        let k = 22;
+        let k = 25;
         let d = 3;
         let n = 1 << k;
         let px = (0..d).map(|_| n_rand::<F>(&mut rng, n)).collect::<Vec<_>>();
 
-        let mut mat = MatrixOwn::from_columns(&px);
+        let mat = MatrixOwn::from_columns(&px);
         let mat0 = mat.clone();
 
-        mat.reverse_bits();
         let sum = info_span!("sum").in_scope(|| {
             mat.par_iter()
                 .map(|row| row.iter().product::<F>())
                 .sum::<F>()
         });
 
-        let mut writer = Writer::init(b"");
+        {
+            let mut mat = mat.clone();
+            mat.reverse_bits();
+            let mut writer = Writer::init(b"");
+            let (red0, rs) = super::algo1::prove(sum, mat, &mut writer).unwrap();
+            let red1 = eval_gate(&mat0, &rs);
+            assert_eq!(red0, red1);
+        }
 
-        let (red0, rs) = super::algo1::prove(sum, mat, &mut writer).unwrap();
-        let red1 = eval_gate(&mat0, &rs);
-        assert_eq!(red0, red1);
+        {
+            let mut mat = mat.clone();
+            mat.reverse_bits();
+            let mut writer = Writer::init(b"");
+            let (red0, rs) = super::algo1::prove3(sum, mat, &mut writer).unwrap();
+            let red1 = eval_gate(&mat0, &rs);
+            assert_eq!(red0, red1);
+        }
+
+        {
+            let mat = mat.clone();
+            let mut writer = Writer::init(b"");
+            let (red0, rs) = super::algo1::prove2(sum, mat, &mut writer).unwrap();
+            let red1 = eval_gate(&mat0, &rs);
+            assert_eq!(red0, red1);
+        }
     }
 }

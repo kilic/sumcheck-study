@@ -49,7 +49,7 @@ pub trait BitReverse<V>: TwoAdicSlice<V> {
     fn swap_rows(self, i: usize, j: usize, w: usize);
 }
 
-impl<V> BitReverse<V> for &mut [V] {
+impl<V: Send + Sync> BitReverse<V> for &mut [V] {
     fn reverse_bits(self) {
         let n = self.len();
         let k = log2_strict(n);
