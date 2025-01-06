@@ -1,5 +1,6 @@
 use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use mysnark::data::MatrixOwn;
+use mysnark::field::Ext;
 use mysnark::sumcheck::algo1;
 use mysnark::transcript::rust_crypto::RustCryptoWriter;
 use mysnark::utils::n_rand;
@@ -14,6 +15,7 @@ fn seed_rng() -> impl rand::Rng {
 fn sumcheck_prover(c: &mut Criterion) {
     type Writer = RustCryptoWriter<Vec<u8>, sha3::Keccak256>;
     type F = mysnark::field::goldilocks::Goldilocks;
+    type EF = Ext<2, F>;
 
     let mut group = c.benchmark_group("group-xxx");
     let id = BenchmarkId::new("some-function-name", 25);
@@ -38,7 +40,7 @@ fn sumcheck_prover(c: &mut Criterion) {
             },
             |(mat, sum)| {
                 let mut writer = Writer::init(b"");
-                let (_red0, _rs) = algo1::prove(sum, mat, &mut writer).unwrap();
+                let (_red0, _rs): (EF, _) = algo1::prove(sum, mat, &mut writer).unwrap();
             },
             BatchSize::LargeInput,
         );

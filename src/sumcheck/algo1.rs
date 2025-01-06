@@ -2,14 +2,14 @@ use rayon::iter::{IndexedParallelIterator, ParallelIterator};
 
 use crate::{
     data::MatrixOwn,
-    field::{Ext, ExtField, Extended, Field},
+    field::{ExtField, Field},
     transcript::{Challenge, Writer},
 };
 
 use super::extrapolate;
 
 #[tracing::instrument(level = "info", skip_all)]
-fn fold_to_ext<F: Field, EF: ExtField<F>>(r: EF, dif: MatrixOwn<F>) -> MatrixOwn<EF> {
+fn fold_to_ext<F: Field, EF: ExtField<F>>(r: EF, dif: &MatrixOwn<F>) -> MatrixOwn<EF> {
     let (dif, acc) = dif.split_half();
     let mut dst: MatrixOwn<EF> =
         tracing::info_span!("the alloc").in_scope(|| MatrixOwn::zero(dif.width(), dif.k()));
@@ -89,23 +89,23 @@ where
 }
 
 #[tracing::instrument(level = "info", skip_all)]
-pub fn prove<const E: usize, F: Extended<E>, Transcript>(
+pub fn prove<F: Field, EF: ExtField<F>, Transcript>(
     sum: F,
     mut px: MatrixOwn<F>,
     transcript: &mut Transcript,
-) -> Result<(Ext<E, F>, Vec<Ext<E, F>>), crate::Error>
+) -> Result<(EF, Vec<EF>), crate::Error>
 where
-    Transcript: Writer<F> + Writer<Ext<E, F>> + Challenge<Ext<E, F>>,
+    Transcript: Writer<F> + Writer<EF> + Challenge<EF>,
 {
     let k = px.k();
     transcript.write(sum)?;
-    let mut rs = vec![];
+    let mut rs: Vec<EF> = vec![];
 
     let (mut px, mut sum) = tracing::info_span!("first round").in_scope(|| {
         let evals = eval(transcript, sum, &mut px)?;
-        let r: Ext<E, F> = transcript.draw();
+        let r = transcript.draw();
         rs.push(r);
-        Ok((fold_to_ext(r, px), extrapolate(&evals, r)))
+        Ok((fold_to_ext(r, &px), extrapolate(&evals, r)))
     })?;
 
     tracing::info_span!("rest").in_scope(|| {
@@ -159,9 +159,9 @@ where
 }
 
 #[tracing::instrument(level = "info", skip_all)]
-fn fold_to_ext2<F: Field, EF: ExtField<F>>(r: EF, px: MatrixOwn<F>) -> MatrixOwn<EF> {
-    let mut dst: MatrixOwn<EF> =
-        tracing::info_span!("the alloc").in_scope(|| MatrixOwn::zero(px.width(), px.k() - 1));
+fn fold_to_ext2<F: Field, EF: ExtField<F>>(r: EF, px: &MatrixOwn<F>) -> MatrixOwn<EF> {
+    let mut dst: MatrixOwn<EF> = tracing::info_span!("the alloc", k = px.k() - 1)
+        .in_scope(|| MatrixOwn::zero(px.width(), px.k() - 1));
     dst.par_iter_mut()
         .zip(px.chunk2())
         .for_each(|(dst, (a0, a1))| {
@@ -193,13 +193,13 @@ fn fold2<F: Field>(r: F, px: &mut MatrixOwn<F>) {
 }
 
 #[tracing::instrument(level = "info", skip_all)]
-pub fn prove2<const E: usize, F: Extended<E>, Transcript>(
+pub fn prove2<F: Field, EF: ExtField<F>, Transcript>(
     sum: F,
     mut px: MatrixOwn<F>,
     transcript: &mut Transcript,
-) -> Result<(Ext<E, F>, Vec<Ext<E, F>>), crate::Error>
+) -> Result<(EF, Vec<EF>), crate::Error>
 where
-    Transcript: Writer<F> + Writer<Ext<E, F>> + Challenge<Ext<E, F>>,
+    Transcript: Writer<F> + Writer<EF> + Challenge<EF>,
 {
     let k = px.k();
     transcript.write(sum)?;
@@ -207,9 +207,9 @@ where
 
     let (mut px, mut sum) = tracing::info_span!("first round").in_scope(|| {
         let evals = eval2(transcript, sum, &mut px)?;
-        let r: Ext<E, F> = transcript.draw();
+        let r: EF = transcript.draw();
         rs.push(r);
-        Ok((fold_to_ext2(r, px), extrapolate(&evals, r)))
+        Ok((fold_to_ext2(r, &px), extrapolate(&evals, r)))
     })?;
 
     tracing::info_span!("rest").in_scope(|| {
@@ -227,18 +227,24 @@ where
 }
 
 #[tracing::instrument(level = "info", skip_all)]
-fn fold_to_ext3<F: Field, EF: ExtField<F>>(r: EF, px: MatrixOwn<F>) -> MatrixOwn<EF> {
+fn fold_to_ext3<F: Field, EF: ExtField<F>>(r: EF, px: &MatrixOwn<F>) -> MatrixOwn<EF> {
     let (lo, hi) = px.split_half();
-    let mut dst: MatrixOwn<EF> =
-        tracing::info_span!("the alloc").in_scope(|| MatrixOwn::zero(lo.width(), lo.k()));
-    dst.par_iter_mut()
-        .zip(lo.par_iter())
-        .zip(hi.par_iter())
-        .for_each(|((mat, lo), hi)| {
-            mat.iter_mut()
+    let mut dst: MatrixOwn<EF> = tracing::info_span!("the alloc", k = lo.k())
+        .in_scope(|| MatrixOwn::zero(lo.width(), lo.k()));
+
+    dst.par_chunks_mut(1 << 15)
+        .zip(lo.par_chunks(1 << 15))
+        .zip(hi.par_chunks(1 << 15))
+        .for_each(|((mut dst, lo), hi)| {
+            dst.iter_mut()
                 .zip(lo.iter())
                 .zip(hi.iter())
-                .for_each(|((mat, &lo), &hi)| *mat = r * (hi - lo) + lo);
+                .for_each(|((mat, lo), hi)| {
+                    mat.iter_mut()
+                        .zip(lo.iter())
+                        .zip(hi.iter())
+                        .for_each(|((mat, &lo), &hi)| *mat = r * (hi - lo) + lo);
+                });
         });
     dst
 }
@@ -294,13 +300,13 @@ where
 }
 
 #[tracing::instrument(level = "info", skip_all)]
-pub fn prove3<const E: usize, F: Extended<E>, Transcript>(
+pub fn prove3<F: Field, EF: ExtField<F>, Transcript>(
     sum: F,
     mut px: MatrixOwn<F>,
     transcript: &mut Transcript,
-) -> Result<(Ext<E, F>, Vec<Ext<E, F>>), crate::Error>
+) -> Result<(EF, Vec<EF>), crate::Error>
 where
-    Transcript: Writer<F> + Writer<Ext<E, F>> + Challenge<Ext<E, F>>,
+    Transcript: Writer<F> + Writer<EF> + Challenge<EF>,
 {
     let k = px.k();
     transcript.write(sum)?;
@@ -308,9 +314,9 @@ where
 
     let (mut px, mut sum) = tracing::info_span!("first round").in_scope(|| {
         let evals = eval3(transcript, sum, &mut px)?;
-        let r: Ext<E, F> = transcript.draw();
+        let r: EF = transcript.draw();
         rs.push(r);
-        Ok((fold_to_ext3(r, px), extrapolate(&evals, r)))
+        Ok((fold_to_ext3(r, &px), extrapolate(&evals, r)))
     })?;
 
     tracing::info_span!("rest").in_scope(|| {
@@ -326,3 +332,16 @@ where
 
     Ok((sum, rs))
 }
+
+// #[test]
+// fn test_transtype() {
+//     type F = crate::field::goldilocks::Goldilocks;
+//     let mut e = vec![F::from(1u64), F::from(2u64), F::from(3u64), F::from(3u64)];
+
+//     let ptr = e.as_mut_ptr() as *mut Ext<2, F>;
+//     let new_len = e.len() / 2;
+//     let new_cap = e.capacity() / 2;
+//     std::mem::forget(e);
+//     let transformed: Vec<Ext<2, F>> = unsafe { Vec::from_raw_parts(ptr, new_len, new_cap) };
+//     println!("{:?}", transformed);
+// }
