@@ -1,16 +1,13 @@
 use crate::{
-    data::MatrixOwn,
-    field::{Ext, Field},
-    mle::MLE,
-    transcript::rust_crypto::RustCryptoWriter,
-    utils::n_rand,
-    Natural,
+    data::MatrixOwn, field::Field, mle::MLE, transcript::rust_crypto::RustCryptoWriter,
+    utils::n_rand, Natural,
 };
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use tracing::info_span;
 
 type F = crate::field::goldilocks::Goldilocks;
-type EF = Ext<2, F>;
+type EF = crate::field::goldilocks::Goldilocks2;
+
 type Writer = RustCryptoWriter<Vec<u8>, sha3::Keccak256>;
 
 pub fn eval_gate(mat: &MatrixOwn<F>, points: &[EF]) -> EF {
@@ -20,7 +17,7 @@ pub fn eval_gate(mat: &MatrixOwn<F>, points: &[EF]) -> EF {
     let evals = eq
         .par_iter()
         .zip(mat.par_iter())
-        .map(|(&r, row)| row.iter().map(|e| r * e).collect::<Vec<_>>())
+        .map(|(&r, row)| row.iter().map(|&e| r * e).collect::<Vec<_>>())
         .reduce(
             || vec![EF::ZERO; mat.width()],
             |acc, next| {

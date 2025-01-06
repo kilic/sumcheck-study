@@ -26,7 +26,7 @@ where
     std::iter::repeat_with(|| rng.gen()).take(n).collect_vec()
 }
 
-#[inline]
+#[inline(always)]
 pub fn log2_strict(n: usize) -> usize {
     let res = n.trailing_zeros();
     debug_assert_eq!(n.wrapping_shr(res), 1, "Not a power of two: {n}");
@@ -34,6 +34,7 @@ pub fn log2_strict(n: usize) -> usize {
 }
 
 pub trait TwoAdicSlice<T>: core::ops::Deref<Target = [T]> {
+    #[inline(always)]
     fn k(&self) -> usize {
         log2_strict(self.len())
     }

@@ -1,3 +1,6 @@
+pub mod ext;
+pub use ext::*;
+
 use super::{FieldOps, FieldOpsAssigned, TwoAdicField};
 use crate::{
     field::{Extended, Field},
@@ -31,21 +34,7 @@ pub fn branch_hint() {
     }
 }
 
-#[test]
-fn test_reduce_wide() {
-    use rand_core::OsRng;
-    let a: u128 = OsRng.gen();
-    let u0 = Goldilocks((a % Goldilocks::P as u128) as u64);
-    let (lo, hi) = split128!(a);
-    let lo = Goldilocks(lo);
-    let hihi = Goldilocks(hi >> 32);
-    let hilo = Goldilocks(hi & Goldilocks::NEGP);
-    let r4 = Goldilocks(Goldilocks::NEGP);
-    let u1 = lo + r4 * hilo - hihi;
-    println!("{}", u0 == u1);
-}
-
-#[inline]
+#[inline(always)]
 pub(crate) fn reduce_wide(x: u128) -> Goldilocks {
     // x_lo + 2^64 * x_hi
     // x_lo + (2^32 - 1) * x_hi_lo - x_hi_hi
@@ -56,7 +45,7 @@ pub(crate) fn reduce_wide(x: u128) -> Goldilocks {
 
     let (mut t0, borrow) = x_lo.overflowing_sub(x_hi_hi);
     if borrow {
-        // branch_hint(); // A borrow is exceedingly rare. It is faster to branch.
+        branch_hint(); // A borrow is exceedingly rare. It is faster to branch.
         t0 -= Goldilocks::NEGP;
     }
     let t1 = x_hi_lo * Goldilocks::NEGP;
@@ -71,12 +60,12 @@ impl Goldilocks {
     pub const P: u64 = 0u64.wrapping_sub(1 << 32) + 1;
     pub const NEGP: u64 = (1 << 32) - 1;
 
-    #[inline]
+    #[inline(always)]
     pub const fn value(&self) -> u64 {
         self.0
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn u64(&self) -> u64 {
         if self.0 >= Self::P {
             self.0 - Self::P
@@ -85,13 +74,13 @@ impl Goldilocks {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn from_u64(e: u64) -> Self {
         // assert!(e < Self::P);
         Self(e)
     }
 
-    #[inline]
+    #[inline(always)]
     pub const fn is_in_field(&self) -> bool {
         self.value() < Self::P
     }
@@ -151,7 +140,7 @@ where
 }
 
 impl Distribution<Goldilocks> for Standard {
-    #[inline]
+    #[inline(always)]
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Goldilocks {
         Goldilocks::rand(rng)
     }
@@ -218,14 +207,14 @@ impl Field for Goldilocks {
 impl core::ops::Add<Goldilocks> for Goldilocks {
     type Output = Self;
 
-    #[inline]
+    #[inline(always)]
     fn add(self, rhs: Goldilocks) -> Self {
         let (sum, over) = self.0.overflowing_add(rhs.0);
         let (mut sum, over) = sum.overflowing_add(u64::from(over) * Self::NEGP);
         if over {
-            // branch_hint();
+            branch_hint();
 
-            // assert!(self.0 > Self::P && rhs.0 > Self::P);
+            debug_assert!(self.0 > Self::P && rhs.0 > Self::P);
             sum += Self::NEGP;
         }
         Self(sum)
@@ -233,24 +222,23 @@ impl core::ops::Add<Goldilocks> for Goldilocks {
 }
 
 impl core::ops::AddAssign for Goldilocks {
-    #[inline]
+    #[inline(always)]
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
     }
 }
 
-// impl_sub!(Goldilocks);
 impl core::ops::Sub<Goldilocks> for Goldilocks {
     type Output = Self;
 
-    #[inline]
+    #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
         let (diff, under) = self.0.overflowing_sub(rhs.0);
         let (mut diff, under) = diff.overflowing_sub(u64::from(under) * Self::NEGP);
         if under {
-            // branch_hint();
+            branch_hint();
 
-            // assert!(self.0 < Self::NEGP - 1 && rhs.0 > Self::P);
+            debug_assert!(self.0 < Self::NEGP - 1 && rhs.0 > Self::P);
             diff -= Self::NEGP;
         }
         Self(diff)
@@ -258,7 +246,7 @@ impl core::ops::Sub<Goldilocks> for Goldilocks {
 }
 
 impl core::ops::SubAssign for Goldilocks {
-    #[inline]
+    #[inline(always)]
     fn sub_assign(&mut self, rhs: Self) {
         *self = *self - rhs;
     }
@@ -267,14 +255,14 @@ impl core::ops::SubAssign for Goldilocks {
 impl core::ops::Mul<Goldilocks> for Goldilocks {
     type Output = Goldilocks;
 
-    #[inline]
+    #[inline(always)]
     fn mul(self, rhs: Goldilocks) -> Goldilocks {
         reduce_wide(u128::from(self.0) * u128::from(rhs.0))
     }
 }
 
 impl core::ops::MulAssign for Goldilocks {
-    #[inline]
+    #[inline(always)]
     fn mul_assign(&mut self, rhs: Self) {
         *self = *self * rhs;
     }
@@ -283,7 +271,7 @@ impl core::ops::MulAssign for Goldilocks {
 impl core::ops::Neg for Goldilocks {
     type Output = Self;
 
-    #[inline]
+    #[inline(always)]
     fn neg(self) -> Self::Output {
         Self(Self::P - self.u64())
     }
@@ -292,7 +280,7 @@ impl core::ops::Neg for Goldilocks {
 impl core::ops::Neg for &Goldilocks {
     type Output = Goldilocks;
 
-    #[inline]
+    #[inline(always)]
     fn neg(self) -> Goldilocks {
         -*self
     }

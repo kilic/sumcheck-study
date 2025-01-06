@@ -188,7 +188,7 @@ pub fn w_reverse_index_bits_in_place<T>(arr: &mut [T], w: usize) {
 
 #[cfg(test)]
 mod test {
-    use crate::test::init_tracing;
+
     use crate::utils::{BitReverse, TwoAdicSlice};
     use crate::{
         data::MatrixOwn,
@@ -211,7 +211,7 @@ mod test {
 
     #[test]
     fn test_bitreverse() {
-        init_tracing();
+        // crate::test::init_tracing();
         type F = crate::field::goldilocks::Goldilocks;
         for k in 20..25 {
             let n = 1 << k;

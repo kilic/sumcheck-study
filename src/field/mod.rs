@@ -1,8 +1,5 @@
-pub use extension::*;
-use std::fmt::Debug;
-
-mod extension;
 pub mod goldilocks;
+// pub mod ext;
 
 pub trait FieldOps<Rhs = Self, Output = Self>:
     Copy
@@ -36,7 +33,7 @@ pub trait Field:
     + Default
     + Send
     + Sync
-    + Debug
+    + std::fmt::Debug
     + 'static
     + From<bool>
     + From<u64>
@@ -58,32 +55,32 @@ pub trait Field:
 
     fn rand(rng: impl rand::RngCore) -> Self;
 
-    #[inline]
+    #[inline(always)]
     fn double(&self) -> Self {
         *self + *self
     }
 
-    #[inline]
+    #[inline(always)]
     fn double_assign(&mut self) {
         *self += *self;
     }
 
-    #[inline]
+    #[inline(always)]
     fn square(&self) -> Self {
         *self * *self
     }
 
-    #[inline]
+    #[inline(always)]
     fn square_assign(&mut self) {
         *self *= *self;
     }
 
-    #[inline]
+    #[inline(always)]
     fn cube(&self) -> Self {
         *self * *self * *self
     }
 
-    #[inline]
+    #[inline(always)]
     fn cube_assign(&mut self) {
         *self = *self * *self * *self;
     }
@@ -156,5 +153,24 @@ pub trait TwoAdicField: Field {
             .take(1 << k)
             .map(|v| v * shift)
             .collect()
+    }
+}
+
+pub trait Extended<const E: usize, T = [Self; E]>: Field {
+    const GENERATOR: T;
+    const NON_RESIDUE: Self;
+    #[inline(always)]
+    fn mul_by_nonresidue(&self) -> Self {
+        Self::NON_RESIDUE * *self
+    }
+}
+
+pub trait ExtField<F: Field>: Field + FieldOps<F, Self> + FieldOpsAssigned<F> + From<F> {
+    fn as_slice(&self) -> &[F];
+}
+
+impl<F: Field> ExtField<F> for F {
+    fn as_slice(&self) -> &[F] {
+        std::slice::from_ref(self)
     }
 }

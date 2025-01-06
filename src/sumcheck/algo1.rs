@@ -174,9 +174,7 @@ fn fold_to_ext2<F: Field, EF: ExtField<F>>(r: EF, px: &MatrixOwn<F>) -> MatrixOw
 }
 
 #[tracing::instrument(level = "info", skip_all)]
-fn fold2<F: Field>(r: F, px: &mut MatrixOwn<F>) {
-    let mut tmp: MatrixOwn<F> =
-        tracing::info_span!("tmp alloc").in_scope(|| MatrixOwn::zero(px.width(), px.k() - 1));
+fn fold2<F: Field>(r: F, px: &mut MatrixOwn<F>, tmp: &mut MatrixOwn<F>) {
     tmp.par_iter_mut()
         .zip(px.chunk2())
         .for_each(|(dst, (a0, a1))| {
@@ -190,6 +188,7 @@ fn fold2<F: Field>(r: F, px: &mut MatrixOwn<F>) {
         .for_each(|(px, tmp)| px.copy_from_slice(tmp));
 
     px.drop_hi();
+    tmp.drop_hi();
 }
 
 #[tracing::instrument(level = "info", skip_all)]
@@ -212,13 +211,14 @@ where
         Ok((fold_to_ext2(r, &px), extrapolate(&evals, r)))
     })?;
 
+    let mut tmp = MatrixOwn::zero(px.width(), px.k() - 1);
     tracing::info_span!("rest").in_scope(|| {
         (1..k).try_for_each(|_round| {
             let evals = eval2(transcript, sum, &mut px)?;
             let r = transcript.draw();
             rs.push(r);
             sum = extrapolate(&evals, r);
-            fold2(r, &mut px);
+            fold2(r, &mut px, &mut tmp);
             Ok(())
         })
     })?;
