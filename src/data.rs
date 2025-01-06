@@ -212,7 +212,7 @@ impl<V, S: Storage<V>> Matrix<V, S> {
     where
         S: AsMut<[V]>,
     {
-        self.storage.as_mut().chunks_exact_mut(self.width)
+        self.storage.as_mut().chunks_mut(self.width)
     }
 
     pub fn par_iter_mut(&mut self) -> impl IndexedParallelIterator<Item = &mut [V]>
@@ -220,7 +220,32 @@ impl<V, S: Storage<V>> Matrix<V, S> {
         S: AsMut<[V]>,
         V: Send + Sync,
     {
-        self.storage.as_mut().par_chunks_exact_mut(self.width)
+        self.storage.as_mut().par_chunks_mut(self.width)
+    }
+
+    pub fn par_chunks_mut(
+        &mut self,
+        size: usize,
+    ) -> impl IndexedParallelIterator<Item = MatrixMut<V>>
+    where
+        S: AsMut<[V]>,
+        V: Send + Sync,
+    {
+        self.storage
+            .as_mut()
+            .par_chunks_mut(self.width * size)
+            .map(|chunk| MatrixMut::new(self.width, chunk))
+    }
+
+    pub fn par_chunks(&self, size: usize) -> impl IndexedParallelIterator<Item = MatrixRef<V>>
+    where
+        S: AsRef<[V]> + Send + Sync,
+        V: Send + Sync,
+    {
+        self.storage
+            .as_ref()
+            .par_chunks(self.width * size)
+            .map(|chunk| MatrixRef::new(self.width, chunk))
     }
 
     pub fn split_mut(&mut self, k: usize) -> (MatrixMut<V>, MatrixMut<V>)
@@ -255,7 +280,6 @@ impl<V, S: Storage<V>> Matrix<V, S> {
         self.split(self.k() - 1)
     }
 
-    #[tracing::instrument(level = "info", skip_all)]
     pub fn reverse_bits(&mut self)
     where
         S: AsMut<[V]>,
