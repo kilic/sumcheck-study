@@ -166,11 +166,20 @@ pub trait Extended<const E: usize, T = [Self; E]>: Field {
 }
 
 pub trait ExtField<F: Field>: Field + FieldOps<F, Self> + FieldOpsAssigned<F> + From<F> {
+    const E: usize;
     fn as_slice(&self) -> &[F];
+    fn from_base_slice_parts(e: Vec<F>, new_size: usize) -> Vec<Self>;
 }
 
 impl<F: Field> ExtField<F> for F {
+    const E: usize = 1;
     fn as_slice(&self) -> &[F] {
         std::slice::from_ref(self)
+    }
+
+    fn from_base_slice_parts(e: Vec<F>, new_len: usize) -> Vec<Self> {
+        let mut e: Vec<Self> = e;
+        e.resize(new_len, Self::default());
+        e
     }
 }

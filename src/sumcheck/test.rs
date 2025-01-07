@@ -51,18 +51,9 @@ fn test_sumcheck() {
     });
 
     {
-        let mut mat = mat.clone();
-        mat.reverse_bits();
-        let mut writer = Writer::init(b"");
-        let (red0, rs) = super::algo1::prove(sum, mat, &mut writer).unwrap();
-        let red1 = eval_gate(&mat0, &rs);
-        assert_eq!(red0, red1);
-    }
-
-    {
         let mat = mat.clone();
         let mut writer = Writer::init(b"");
-        let (red0, rs) = super::algo1::prove2(sum, mat, &mut writer).unwrap();
+        let (red0, rs) = super::algo1::natural::prove(sum, mat, &mut writer).unwrap();
         let red1 = eval_gate(&mat0, &rs);
         assert_eq!(red0, red1);
     }
@@ -71,7 +62,7 @@ fn test_sumcheck() {
         let mut mat = mat.clone();
         mat.reverse_bits();
         let mut writer = Writer::init(b"");
-        let (red0, rs) = super::algo1::prove3(sum, mat, &mut writer).unwrap();
+        let (red0, rs) = super::algo1::reversed::prove(sum, mat, &mut writer).unwrap();
         let red1 = eval_gate(&mat0, &rs);
         assert_eq!(red0, red1);
     }
