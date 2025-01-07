@@ -45,7 +45,7 @@ fn sumcheck_prover_reversed(c: &mut Criterion) {
             || setup::<F>(25, 3),
             |(mat, sum)| {
                 let mut writer = Writer::init(b"");
-                let (_red0, _rs): (EF, _) = algo1::reversed::prove(sum, mat, &mut writer).unwrap();
+                let (_red0, _rs): (EF, _) = algo1::reversed::prove(sum, &mat, &mut writer).unwrap();
             },
             BatchSize::LargeInput,
         );

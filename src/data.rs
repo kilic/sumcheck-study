@@ -171,7 +171,7 @@ impl<V, S: Storage<V>> Matrix<V, S> {
             .map(|inner| Matrix::new(self.width, inner))
     }
 
-    pub fn chunk2_mut(&mut self) -> impl IndexedParallelIterator<Item = (&mut [V], &mut [V])>
+    pub fn chunk_pair_mut(&mut self) -> impl IndexedParallelIterator<Item = (&mut [V], &mut [V])>
     where
         S: AsMut<[V]>,
         V: Send + Sync,
@@ -182,7 +182,7 @@ impl<V, S: Storage<V>> Matrix<V, S> {
             .map(|inner| inner.split_at_mut(self.width))
     }
 
-    pub fn chunk2(&self) -> impl IndexedParallelIterator<Item = (&[V], &[V])>
+    pub fn chunk_pair(&self) -> impl IndexedParallelIterator<Item = (&[V], &[V])>
     where
         S: AsRef<[V]> + Send + Sync,
         V: Send + Sync,

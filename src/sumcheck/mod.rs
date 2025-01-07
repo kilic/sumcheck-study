@@ -4,6 +4,7 @@ use crate::{
 };
 
 pub mod algo1;
+pub mod gate;
 #[cfg(test)]
 mod test;
 
