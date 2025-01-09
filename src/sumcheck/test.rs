@@ -1,60 +1,22 @@
+use super::gate::{Gate, GenericGate, ZeroGate};
 use crate::{
-    data::MatrixOwn, field::Field, mle::MLE, sumcheck::gate::HandGateExample,
-    transcript::rust_crypto::RustCryptoWriter, utils::n_rand, Natural,
+    data::MatrixOwn,
+    sumcheck::gate::{HandGateExample, HandGateMulExample},
+    transcript::rust_crypto::{RustCryptoReader, RustCryptoWriter},
+    utils::n_rand,
 };
-use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::ParallelIterator;
 use tracing::info_span;
-
-use super::gate::{Gate, GenericGate};
 
 type F = crate::field::goldilocks::Goldilocks;
 type EF = crate::field::goldilocks::Goldilocks2;
 
 type Writer = RustCryptoWriter<Vec<u8>, sha3::Keccak256>;
-
-pub fn eval_gate(mat: &MatrixOwn<F>, points: &[EF]) -> EF {
-    assert_eq!(points.len(), mat.k());
-    let eq = MLE::<_, Natural>::eq(points);
-
-    let evals = eq
-        .par_iter()
-        .zip(mat.par_iter())
-        .map(|(&r, row)| row.iter().map(|&e| r * e).collect::<Vec<_>>())
-        .reduce(
-            || vec![EF::ZERO; mat.width()],
-            |acc, next| {
-                acc.iter()
-                    .zip(next.iter())
-                    .map(|(&acc, &next)| acc + next)
-                    .collect::<Vec<_>>()
-            },
-        );
-
-    evals.iter().product()
-}
+type Reader<'a> = RustCryptoReader<&'a [u8], sha3::Keccak256>;
 
 #[test]
-fn test_gate_eval() {
-    // crate::test::init_tracing();
-    let mut rng = crate::test::seed_rng();
-
-    let k = 25;
-    let d = 3;
-    let n = 1 << k;
-    let px = (0..d).map(|_| n_rand::<F>(&mut rng, n)).collect::<Vec<_>>();
-    let px = MatrixOwn::from_columns(&px);
-
-    let generic_gate = GenericGate::new(vec![vec![0usize.into(), 1usize.into(), 2usize.into()]], 3);
-    let hand_gate = HandGateExample {};
-
-    let e0 = generic_gate.eval(&px);
-    let e1 = hand_gate.eval(&px);
-    assert_eq!(e0, e1);
-}
-
-#[test]
-fn test_prover() {
-    // crate::test::init_tracing();
+fn test_sumcheck_prover() {
+    crate::test::init_tracing();
     let mut rng = crate::test::seed_rng();
 
     let k = 25;
@@ -73,36 +35,91 @@ fn test_prover() {
 
     {
         let mat = mat.clone();
+        let gate = GenericGate::new(vec![vec![0usize.into(), 1usize.into(), 2usize.into()]], 3);
         let mut writer = Writer::init(b"");
-        let (red0, rs) = super::algo1::natural::prove(sum, mat, &mut writer).unwrap();
-        let red1 = eval_gate(&mat0, &rs);
+        let (red0, rs) = super::algo1::prove(sum, mat, &gate, &mut writer).unwrap();
+        let red1: EF = gate.eval(&rs, &mat0);
         assert_eq!(red0, red1);
-    }
 
-    {
-        let mut mat = mat.clone();
-        mat.reverse_bits();
-        let mut writer = Writer::init(b"");
-        let (red0, rs) = super::algo1::reversed::prove(sum, &mat, &mut writer).unwrap();
-        let red1 = eval_gate(&mat0, &rs);
-        assert_eq!(red0, red1);
+        let proof = writer.finalize();
+        let mut reader = Reader::init(&proof, b"");
+        let (red2, _rs) = super::reduce_sumcheck_claim::<F, EF, _>(k, d, &mut reader).unwrap();
+        assert_eq!(rs, _rs);
+        assert_eq!(red0, red2)
     }
 
     {
         let mat = mat.clone();
         let gate = HandGateExample {};
         let mut writer = Writer::init(b"");
-        let (red0, rs) = super::algo1::gated::prove(sum, mat, gate, &mut writer).unwrap();
-        let red1 = eval_gate(&mat0, &rs);
+        let (red0, rs) = super::algo1::prove(sum, mat, &gate, &mut writer).unwrap();
+        let red1: EF = gate.eval(&rs, &mat0);
         assert_eq!(red0, red1);
+
+        let proof = writer.finalize();
+        let mut reader = Reader::init(&proof, b"");
+        let (red2, _rs) = super::reduce_sumcheck_claim::<F, EF, _>(k, d, &mut reader).unwrap();
+        assert_eq!(rs, _rs);
+        assert_eq!(red0, red2)
     }
 
-    {
-        let mat = mat.clone();
-        let gate = GenericGate::new(vec![vec![0usize.into(), 1usize.into(), 2usize.into()]], 3);
-        let mut writer = Writer::init(b"");
-        let (red0, rs) = super::algo1::gated::prove(sum, mat, gate, &mut writer).unwrap();
-        let red1 = eval_gate(&mat0, &rs);
-        assert_eq!(red0, red1);
-    }
+    // {
+    //     let mat = mat.clone();
+    //     let mut writer = Writer::init(b"");
+    //     let (red0, rs) = super::algo1::natural::prove(sum, mat, &mut writer).unwrap();
+    //     let red1 = eval_gate(&mat0, &rs);
+    //     assert_eq!(red0, red1);
+
+    //     let proof = writer.finalize();
+    //     let mut reader = Reader::init(&proof, b"");
+    //     let (red2, _rs) = super::reduce_sumcheck_claim::<F, EF, _>(k, d, &mut reader).unwrap();
+    //     assert_eq!(rs, _rs);
+    //     assert_eq!(red0, red2)
+    // }
+
+    // {
+    //     let mut mat = mat.clone();
+    //     mat.reverse_bits();
+    //     let mut writer = Writer::init(b"");
+    //     let (red0, rs) = super::algo1::reversed::prove(sum, &mat, &mut writer).unwrap();
+    //     let red1 = eval_gate(&mat0, &rs);
+    //     assert_eq!(red0, red1);
+
+    //     let proof = writer.finalize();
+    //     let mut reader = Reader::init(&proof, b"");
+    //     let (red2, _rs) = super::reduce_sumcheck_claim::<F, EF, _>(k, d, &mut reader).unwrap();
+    //     assert_eq!(rs, _rs);
+    //     assert_eq!(red0, red2)
+    // }
+}
+
+#[test]
+fn test_zerocheck_prover() {
+    crate::test::init_tracing();
+    let mut rng = crate::test::seed_rng();
+    let k = 25;
+    let n = 1 << k;
+    let degree = 2;
+    let ys: Vec<EF> = n_rand(&mut rng, k);
+
+    let ax = n_rand::<F>(&mut rng, n);
+    let bx = n_rand::<F>(&mut rng, n);
+    let cx = ax
+        .iter()
+        .zip(bx.iter())
+        .map(|(&a, &b)| a * b)
+        .collect::<Vec<_>>();
+    let mat = MatrixOwn::from_columns(&[ax, bx, cx]);
+
+    let mut writer = Writer::init(b"");
+    let gate = HandGateMulExample {};
+    let (red0, rs) = super::zerocheck::prove(&mut writer, mat.clone(), gate, &ys).unwrap();
+    let red1 = gate.eval(&rs, &mat);
+    assert_eq!(red0, red1);
+
+    let proof = writer.finalize();
+    let mut reader = Reader::init(&proof, b"");
+    let (red2, _rs) = super::reduce_zerocheck_claim::<F, EF, _>(&mut reader, degree, &ys).unwrap();
+    assert_eq!(rs, _rs);
+    assert_eq!(red0, red2)
 }

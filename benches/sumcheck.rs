@@ -2,6 +2,7 @@ use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criteri
 use mysnark::data::MatrixOwn;
 use mysnark::field::Field;
 use mysnark::sumcheck::algo1;
+use mysnark::sumcheck::gate::HandGateExample;
 use mysnark::transcript::rust_crypto::RustCryptoWriter;
 use mysnark::utils::n_rand;
 use rand::distributions::Standard;
@@ -21,10 +22,8 @@ where
     let n = 1 << k;
     let mut rng = seed_rng();
     let px = (0..d).map(|_| n_rand::<F>(&mut rng, n)).collect::<Vec<_>>();
-
     let mut mat = MatrixOwn::from_columns(&px);
     mat.reverse_bits();
-
     let sum = mat
         .par_iter()
         .map(|row| row.iter().product::<F>())
@@ -45,18 +44,8 @@ fn sumcheck_prover_reversed(c: &mut Criterion) {
             || setup::<F>(25, 3),
             |(mat, sum)| {
                 let mut writer = Writer::init(b"");
-                let (_red0, _rs): (EF, _) = algo1::reversed::prove(sum, &mat, &mut writer).unwrap();
-            },
-            BatchSize::LargeInput,
-        );
-    });
-    let id = BenchmarkId::new("prove natural", 25);
-    group.bench_function(id, |b| {
-        b.iter_batched(
-            || setup::<F>(25, 3),
-            |(mat, sum)| {
-                let mut writer = Writer::init(b"");
-                let (_red0, _rs): (EF, _) = algo1::natural::prove(sum, mat, &mut writer).unwrap();
+                let gate = HandGateExample {};
+                let (_red0, _rs): (EF, _) = algo1::prove(sum, mat, &gate, &mut writer).unwrap();
             },
             BatchSize::LargeInput,
         );

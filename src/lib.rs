@@ -44,13 +44,3 @@ pub(crate) mod test {
             .init();
     }
 }
-
-pub trait IndexOrder: Default + Clone + Copy + Eq + PartialEq {}
-
-#[derive(Debug, Clone, PartialEq, Eq, Copy, Default)]
-pub struct Natural;
-#[derive(Debug, Clone, PartialEq, Eq, Copy, Default)]
-pub struct BitReversed;
-
-impl IndexOrder for Natural {}
-impl IndexOrder for BitReversed {}
