@@ -1,7 +1,6 @@
-use super::gate::{Gate, GenericGate, ZeroGate};
 use crate::{
     data::MatrixOwn,
-    sumcheck::gate::{HandGateExample, HandGateMulExample},
+    gate::{Gate, GenericGate, HandGateExample, HandGateMulExample, ZeroGate},
     transcript::rust_crypto::{RustCryptoReader, RustCryptoWriter},
     utils::n_rand,
 };
@@ -15,8 +14,8 @@ type Writer = RustCryptoWriter<Vec<u8>, sha3::Keccak256>;
 type Reader<'a> = RustCryptoReader<&'a [u8], sha3::Keccak256>;
 
 #[test]
-fn test_sumcheck_prover() {
-    crate::test::init_tracing();
+fn test_sumcheck_prover1() {
+    // crate::test::init_tracing();
     let mut rng = crate::test::seed_rng();
 
     let k = 25;
@@ -26,7 +25,6 @@ fn test_sumcheck_prover() {
 
     let mat = MatrixOwn::from_columns(&px);
     let mat0 = mat.clone();
-
     let sum = info_span!("sum").in_scope(|| {
         mat.par_iter()
             .map(|row| row.iter().product::<F>())
@@ -62,40 +60,62 @@ fn test_sumcheck_prover() {
         assert_eq!(rs, _rs);
         assert_eq!(red0, red2)
     }
+}
 
-    // {
-    //     let mat = mat.clone();
-    //     let mut writer = Writer::init(b"");
-    //     let (red0, rs) = super::algo1::natural::prove(sum, mat, &mut writer).unwrap();
-    //     let red1 = eval_gate(&mat0, &rs);
-    //     assert_eq!(red0, red1);
+#[test]
+fn test_sumcheck_prover2() {
+    // crate::test::init_tracing();
+    let mut rng = crate::test::seed_rng();
 
-    //     let proof = writer.finalize();
-    //     let mut reader = Reader::init(&proof, b"");
-    //     let (red2, _rs) = super::reduce_sumcheck_claim::<F, EF, _>(k, d, &mut reader).unwrap();
-    //     assert_eq!(rs, _rs);
-    //     assert_eq!(red0, red2)
-    // }
+    let k = 25;
+    let d = 3;
+    let n = 1 << k;
+    let px = (0..d)
+        .map(|_| n_rand::<EF>(&mut rng, n))
+        .collect::<Vec<_>>();
 
-    // {
-    //     let mut mat = mat.clone();
-    //     mat.reverse_bits();
-    //     let mut writer = Writer::init(b"");
-    //     let (red0, rs) = super::algo1::reversed::prove(sum, &mat, &mut writer).unwrap();
-    //     let red1 = eval_gate(&mat0, &rs);
-    //     assert_eq!(red0, red1);
+    let mat = MatrixOwn::from_columns(&px);
+    let mat0 = mat.clone();
+    let sum = info_span!("sum").in_scope(|| {
+        mat.par_iter()
+            .map(|row| row.iter().product::<EF>())
+            .sum::<EF>()
+    });
 
-    //     let proof = writer.finalize();
-    //     let mut reader = Reader::init(&proof, b"");
-    //     let (red2, _rs) = super::reduce_sumcheck_claim::<F, EF, _>(k, d, &mut reader).unwrap();
-    //     assert_eq!(rs, _rs);
-    //     assert_eq!(red0, red2)
-    // }
+    {
+        let mat = mat.clone();
+        let gate = GenericGate::new(vec![vec![0usize.into(), 1usize.into(), 2usize.into()]], 3);
+        let mut writer = Writer::init(b"");
+        let (red0, rs) = super::algo1::prove_nat(sum, mat, &gate, &mut writer).unwrap();
+        let red1: EF = gate.eval(&rs, &mat0);
+        assert_eq!(red0, red1);
+
+        let proof = writer.finalize();
+        let mut reader = Reader::init(&proof, b"");
+        let (red2, _rs) = super::reduce_sumcheck_claim::<EF, EF, _>(k, d, &mut reader).unwrap();
+        assert_eq!(rs, _rs);
+        assert_eq!(red0, red2)
+    }
+
+    {
+        let mat = mat.clone();
+        let gate = HandGateExample {};
+        let mut writer = Writer::init(b"");
+        let (red0, rs) = super::algo1::prove_nat(sum, mat, &gate, &mut writer).unwrap();
+        let red1: EF = gate.eval(&rs, &mat0);
+        assert_eq!(red0, red1);
+
+        let proof = writer.finalize();
+        let mut reader = Reader::init(&proof, b"");
+        let (red2, _rs) = super::reduce_sumcheck_claim::<EF, EF, _>(k, d, &mut reader).unwrap();
+        assert_eq!(rs, _rs);
+        assert_eq!(red0, red2)
+    }
 }
 
 #[test]
 fn test_zerocheck_prover() {
-    crate::test::init_tracing();
+    // crate::test::init_tracing();
     let mut rng = crate::test::seed_rng();
     let k = 25;
     let n = 1 << k;

@@ -1,8 +1,9 @@
-use super::{extrapolate, gate::ZeroGate};
-use crate::mle::MLE;
+use super::extrapolate;
 use crate::{
     data::MatrixOwn,
     field::{ExtField, Field},
+    gate::ZeroGate,
+    mle::MLE,
     transcript::{Challenge, Writer},
 };
 use rayon::iter::{IndexedParallelIterator, ParallelIterator};

@@ -4,6 +4,7 @@ pub mod mle;
 pub mod sumcheck;
 pub mod transcript;
 pub mod utils;
+pub mod gate;
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum Error {

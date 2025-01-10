@@ -136,13 +136,6 @@ impl<F: Field> MLE<F> {
         ml
     }
 
-    pub fn inner_prod<EF: ExtField<F>>(&self, rhs: &MLE<EF>) -> EF {
-        rhs.par_iter()
-            .zip(self.par_iter())
-            .map(|(&a, &b)| a * b)
-            .sum()
-    }
-
     pub fn fix_mut(&mut self, points: &[F]) {
         fix_mut(self, points);
     }
@@ -220,30 +213,6 @@ mod test {
 
     #[test]
     fn test_mle() {
-        #[tracing::instrument(level = "info", skip_all)]
-        pub fn mke_eqs0<F: Field>(ys: &[F]) -> Vec<(MLE<F>, F)> {
-            let mut eqs: Vec<(MLE<F>, F)> =
-                vec![(MLE::new(vec![F::ONE]), ys.last().cloned().unwrap())];
-            for &ycur in ys.iter().rev().skip(1) {
-                let (mut eq, yprev) = eqs.last().unwrap().clone();
-                eq.extend(yprev);
-                eqs.push((eq, ycur));
-            }
-            eqs
-        }
-
-        #[tracing::instrument(level = "info", skip_all)]
-        pub fn mke_eqs1<F: Field>(ys: &[F]) -> Vec<(MLE<F>, F)> {
-            let init = MLE::new(vec![F::ONE]);
-            let mut eqs = vec![(init.clone(), ys.last().cloned().unwrap())];
-
-            for &ycur in ys.iter().rev().skip(1) {
-                let (eq, yprev) = eqs.last().unwrap().clone();
-                eqs.push((eq.extend_to(yprev), ycur));
-            }
-            eqs
-        }
-
         let mut rng = crate::test::seed_rng();
         let k = 25;
 
