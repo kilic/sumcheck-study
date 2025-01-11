@@ -48,12 +48,10 @@ pub(crate) fn reduce_wide(x: u128) -> Goldilocks {
         branch_hint(); // A borrow is exceedingly rare. It is faster to branch.
         t0 -= Goldilocks::NEGP;
     }
-    // let t1 = x_hi_lo * Goldilocks::NEGP;
-    let t1 = unsafe { mul_epsilon(x_hi_lo) };
+    let t1 = x_hi_lo * Goldilocks::NEGP;
 
     let (res_wrapped, carry) = t0.overflowing_add(t1);
-    // let t2 = res_wrapped + Goldilocks::NEGP * u64::from(carry);
-    let t2 = res_wrapped + unsafe { mul_epsilon(carry as u64) };
+    let t2 = res_wrapped + Goldilocks::NEGP * u64::from(carry);
 
     Goldilocks(t2)
 }
@@ -212,8 +210,9 @@ impl core::ops::Add<Goldilocks> for Goldilocks {
     #[inline(always)]
     fn add(self, rhs: Goldilocks) -> Self {
         let (sum, over) = self.0.overflowing_add(rhs.0);
-        // let (mut sum, over) = sum.overflowing_add(u64::from(over) * Self::NEGP);
-        let (mut sum, over) = sum.overflowing_add(unsafe { mul_epsilon(over as u64) });
+
+        let (mut sum, over) = sum.overflowing_add(u64::from(over) * Self::NEGP);
+
         if over {
             branch_hint();
 
@@ -237,7 +236,7 @@ impl core::ops::Sub<Goldilocks> for Goldilocks {
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
         let (diff, under) = self.0.overflowing_sub(rhs.0);
-        let (mut diff, under) = diff.overflowing_sub(unsafe { mul_epsilon(under as u64) });
+        let (mut diff, under) = diff.overflowing_sub(u64::from(under) * Self::NEGP);
         if under {
             branch_hint();
 
@@ -315,4 +314,32 @@ impl<'a> core::iter::Product<&'a Goldilocks> for Goldilocks {
             .reduce(|x, y| x * y)
             .unwrap_or(Goldilocks::ONE)
     }
+}
+
+#[test]
+fn bench_goldi2() {
+    let k = 25;
+    let n = 1 << k;
+    let mut rng = crate::test::seed_rng();
+    type EF = Goldilocks;
+    let e = (0..n).map(|_| rng.gen()).collect::<Vec<EF>>();
+
+    crate::test::init_tracing();
+
+    let mut acc = EF::ONE;
+
+    tracing::info_span!("yyy").in_scope(|| {
+        for &e in e.iter() {
+            acc += e;
+        }
+    });
+    println!("{:?}", acc);
+
+    let mut acc = EF::ONE;
+    tracing::info_span!("xxx").in_scope(|| {
+        for &e in e.iter() {
+            acc *= e;
+        }
+    });
+    println!("{:?}", acc);
 }

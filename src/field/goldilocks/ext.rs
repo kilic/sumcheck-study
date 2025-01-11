@@ -1,5 +1,3 @@
-use std::arch::asm;
-
 use rand::distributions::Standard;
 use rand::prelude::Distribution;
 
@@ -320,24 +318,7 @@ impl Field for Goldilocks2 {
 unsafe fn add_no_canonicalize_trashing_input(x: u64, y: u64) -> u64 {
     let (res_wrapped, carry) = x.overflowing_add(y);
     // Below cannot overflow unless the assumption if x + y < 2**64 + ORDER is incorrect.
-    // res_wrapped + Goldilocks::NEGP * (carry as u64)
-    res_wrapped + mul_epsilon(carry as u64)
-}
-
-/// Multiplication of the low word (i.e., x as u32) by EPSILON.
-#[inline(always)]
-pub(crate) unsafe fn mul_epsilon(x: u64) -> u64 {
-    let res;
-    asm!(
-        // Use UMULL to save one instruction. The compiler emits two: extract the low word and then
-        // multiply.
-        "umull {res}, {x:w}, {epsilon:w}",
-        x = in(reg) x,
-        epsilon = in(reg) 0xffffffffu64,
-        res = lateout(reg) res,
-        options(pure, nomem, nostack, preserves_flags),
-    );
-    res
+    res_wrapped + Goldilocks::NEGP * (carry as u64)
 }
 
 #[inline(always)]
@@ -357,8 +338,7 @@ pub(crate) unsafe fn reduce160(x_lo: u128, x_hi: u32) -> Goldilocks {
         t0 -= Goldilocks::NEGP; // Cannot underflow if x_hi is canonical.
     }
     // imul
-    // let t1 = (x_mid as u64) * Goldilocks::NEGP;
-    let t1 = mul_epsilon(x_mid as u64);
+    let t1 = (x_mid as u64) * Goldilocks::NEGP;
     // add, sbb, add
     let t2 = add_no_canonicalize_trashing_input(t0, t1);
     t2.into()
