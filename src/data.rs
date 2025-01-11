@@ -52,7 +52,7 @@ impl<V> MatrixOwn<V> {
 
     pub fn zero(width: usize, k: usize) -> Self
     where
-        V: Default + Copy,
+        V: Default,
     {
         let height = 1 << k;
         Self::new(width, unsafe_allocate_zero_vec(width * height))

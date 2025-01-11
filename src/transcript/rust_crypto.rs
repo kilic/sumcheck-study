@@ -60,7 +60,7 @@ impl<W: Write, D: Digest + FixedOutputReset> RustCryptoWriter<W, D> {
 }
 
 impl<W: Write, D: Digest + FixedOutputReset, F: Field> Writer<F> for RustCryptoWriter<W, D> {
-    fn write_unsafe(&mut self, e: F) -> Result<(), Error> {
+    fn no_contrib_write(&mut self, e: F) -> Result<(), Error> {
         let data = e.to_bytes();
         self.writer
             .write_all(data.as_ref())
@@ -69,7 +69,7 @@ impl<W: Write, D: Digest + FixedOutputReset, F: Field> Writer<F> for RustCryptoW
     }
 
     fn write(&mut self, e: F) -> Result<(), Error> {
-        self.write_unsafe(e)?;
+        self.no_contrib_write(e)?;
         self.update(e.to_bytes());
         Ok(())
     }
@@ -107,7 +107,7 @@ impl<R: Read, D: Digest + FixedOutputReset, F: Field> Challenge<F> for RustCrypt
 }
 
 impl<R: Read, D: Digest + FixedOutputReset, F: Field> Reader<F> for RustCryptoReader<R, D> {
-    fn read_unsafe(&mut self) -> Result<F, Error> {
+    fn no_contrib_read(&mut self) -> Result<F, Error> {
         let mut data = vec![0u8; F::NUM_BYTES];
         self.reader
             .read_exact(data.as_mut())
@@ -117,7 +117,7 @@ impl<R: Read, D: Digest + FixedOutputReset, F: Field> Reader<F> for RustCryptoRe
     }
 
     fn read(&mut self) -> Result<F, Error> {
-        let e: F = self.read_unsafe()?;
+        let e: F = self.no_contrib_read()?;
         self.update(e.to_bytes());
         Ok(e)
     }

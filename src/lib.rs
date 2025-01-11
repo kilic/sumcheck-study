@@ -1,10 +1,10 @@
 pub mod data;
 pub mod field;
+pub mod gate;
 pub mod mle;
 pub mod sumcheck;
 pub mod transcript;
 pub mod utils;
-pub mod gate;
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum Error {
