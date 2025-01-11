@@ -1,5 +1,5 @@
 use crate::field::Field;
-use crate::utils::{log2_strict, BitReverse, TwoAdicSlice};
+use crate::utils::{log2_strict, unsafe_allocate_zero_vec, BitReverse, TwoAdicSlice};
 use core::fmt::Debug;
 use rand::{distributions::Standard, prelude::Distribution};
 use rayon::iter::{IndexedParallelIterator, ParallelIterator};
@@ -55,7 +55,7 @@ impl<V> MatrixOwn<V> {
         V: Default + Copy,
     {
         let height = 1 << k;
-        Self::new(width, vec![V::default(); width * height])
+        Self::new(width, unsafe_allocate_zero_vec(width * height))
     }
 
     pub fn as_mut(&mut self) -> MatrixMut<'_, V> {
